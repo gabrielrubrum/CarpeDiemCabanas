@@ -10,11 +10,6 @@ export const metadata: Metadata = {
   description: 'Histórias, inspirações e experiências sobre natureza, viagem e refúgios contemporâneos.',
 };
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
 export default async function BlogPage() {
   const posts = await getPosts({ per_page: 100 });
 
@@ -147,8 +142,8 @@ export default async function BlogPage() {
                   {featuredPost.excerpt}
                 </p>
                 <div className="flex items-center gap-6 text-[11px] tracking-[0.16em] text-black/40 uppercase mb-8">
-                  <span>{formatDate(featuredPost.date)}</span>
-                  <span className="text-black/30">•</span>
+                  {featuredPost.date && <span>{featuredPost.date}</span>}
+                  {featuredPost.date && <span className="text-black/30">•</span>}
                   <span>{featuredPost.readTime || '5 min'} de leitura</span>
                 </div>
                 <Link
@@ -235,9 +230,9 @@ export default async function BlogPage() {
 
                         {/* Metadata */}
                         <div className="mt-5 flex items-center gap-3 text-[9px] lg:text-[10px] uppercase tracking-[0.18em] text-[#989186]">
-                          <span>{formatDate(post.date)}</span>
-                          <span>•</span>
-                          <span>{post.readTime || '5 min'} de leitura</span>
+                          {post.date && <span>{post.date}</span>}
+                          {post.date && <span>•</span>}
+                          <span>{post.readTime || '5 MIN'} de leitura</span>
                         </div>
 
                         {/* Link */}

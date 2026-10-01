@@ -4,7 +4,7 @@ export interface BlogPost {
   title: string;
   excerpt: string;
   content: string;
-  date: string;
+  date: string | null;
   category: string;
   categorySlug?: string | null;
   featuredImage: string | null;

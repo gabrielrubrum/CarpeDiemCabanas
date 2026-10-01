@@ -41,32 +41,42 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
 }
 
-// Helper to format date
-function formatDate(dateString: string): string {
+// Helper to format date in Brazilian Portuguese uppercase (e.g. 01 OUT 2026)
+function formatDate(dateString: string | null | undefined): string | null {
+  if (!dateString) return null;
+
   const date = new Date(dateString);
   if (isNaN(date.getTime())) {
-    return dateString; // Return original if invalid
+    return null;
   }
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).toUpperCase();
+
+  const day = date.getDate().toString().padStart(2, '0');
+  const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${day} ${month} ${year}`;
 }
 
 // Helper to calculate read time
 function calculateReadTime(content: string): string {
   const plainText = stripHtml(content);
-  const words = plainText.split(/\s+/).length;
-  const minutes = Math.ceil(words / 200);
-  return `${minutes} min`;
+  const words = plainText.split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  return `${minutes} MIN`;
 }
 
 // Normalize WordPress post to BlogPost format
 function normalizeWordPressPost(wpPost: WordPressPost): BlogPost {
   const featuredMedia = wpPost._embedded?.['wp:featuredmedia']?.[0];
-  const category = wpPost._embedded?.['wp:term']?.[0]?.[0]?.name || 'Sem categoria';
+  let category = wpPost._embedded?.['wp:term']?.[0]?.[0]?.name || 'JOURNAL';
   const categorySlug = wpPost._embedded?.['wp:term']?.[0]?.[0]?.slug || null;
+
+  if (!category || category.trim().toLowerCase() === 'uncategorized' || category.trim().toLowerCase() === 'sem categoria') {
+    category = 'JOURNAL';
+  }
+
+  const rawDate = wpPost.date || (wpPost as unknown as { date_gmt?: string }).date_gmt;
 
   return {
     id: wpPost.id.toString(),
@@ -74,8 +84,8 @@ function normalizeWordPressPost(wpPost: WordPressPost): BlogPost {
     title: stripHtml(wpPost.title.rendered),
     excerpt: stripHtml(wpPost.excerpt.rendered),
     content: wpPost.content.rendered,
-    date: formatDate(wpPost.date),
-    category,
+    date: formatDate(rawDate),
+    category: category.toUpperCase(),
     categorySlug,
     featuredImage: featuredMedia?.source_url || null,
     readTime: calculateReadTime(wpPost.content.rendered),
