@@ -61,17 +61,24 @@ jobs:
           HOSTGATOR_REMOTE_PATH: ${{ secrets.HOSTGATOR_REMOTE_PATH }}
           HOSTGATOR_PROTOCOL: ${{ secrets.HOSTGATOR_PROTOCOL }}
         run: |
-          : "${HOSTGATOR_PROTOCOL:=ftp}"
+          : "${HOSTGATOR_PROTOCOL:=ftps}"
           : "${HOSTGATOR_PORT:=21}"
-          : "${HOSTGATOR_REMOTE_PATH:=public_html}"
+          : "${HOSTGATOR_REMOTE_PATH:=/}"
 
-          lftp -u "$HOSTGATOR_USERNAME","$HOSTGATOR_PASSWORD" -p "$HOSTGATOR_PORT" "$HOSTGATOR_PROTOCOL://$HOSTGATOR_HOST" <<EOF
+          if [ "$HOSTGATOR_PROTOCOL" = "ftps" ]; then
+            LFTP_URL="ftp://$HOSTGATOR_HOST"
+            SSL_FORCE="true"
+          else
+            LFTP_URL="$HOSTGATOR_PROTOCOL://$HOSTGATOR_HOST"
+            SSL_FORCE="false"
+          fi
+
+          lftp -u "$HOSTGATOR_USERNAME","$HOSTGATOR_PASSWORD" -p "$HOSTGATOR_PORT" "$LFTP_URL" <<EOF
           set ssl:verify-certificate yes
           set ftp:ssl-allow yes
-          set ftp:ssl-force false
+          set ftp:ssl-force $SSL_FORCE
           set net:max-retries 2
           set net:timeout 30
-          mkdir -p "$HOSTGATOR_REMOTE_PATH"
-          mirror --reverse --verbose --parallel=4 --exclude-glob wp/ --exclude-glob wp/** --exclude-glob wp-admin/** --exclude-glob wp-content/** --exclude-glob wp-includes/** out/ "$HOSTGATOR_REMOTE_PATH"/
+          mirror --reverse --verbose --parallel=4 --exclude-glob wp/ --exclude-glob wp/** --exclude-glob .well-known/ --exclude-glob .well-known/** --exclude-glob .ftpquota --exclude-glob .htaccess out/ "$HOSTGATOR_REMOTE_PATH"/
           bye
           EOF
