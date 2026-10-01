@@ -1,0 +1,77 @@
+name: Deploy HostGator
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Motivo do deploy
+        required: false
+      post_id:
+        description: ID do post WordPress que disparou o deploy
+        required: false
+  schedule:
+    - cron: '0 */6 * * *'
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      WORDPRESS_API_URL: ${{ vars.WORDPRESS_API_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build static site
+        run: npm run build
+
+      - name: Validate static export
+        run: |
+          test -f out/index.html
+          test -f out/blog/index.html
+          test -f out/404.html
+          test -d out/_next
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Deploy static files to HostGator
+        env:
+          HOSTGATOR_HOST: ${{ secrets.HOSTGATOR_HOST }}
+          HOSTGATOR_USERNAME: ${{ secrets.HOSTGATOR_USERNAME }}
+          HOSTGATOR_PASSWORD: ${{ secrets.HOSTGATOR_PASSWORD }}
+          HOSTGATOR_PORT: ${{ secrets.HOSTGATOR_PORT }}
+          HOSTGATOR_REMOTE_PATH: ${{ secrets.HOSTGATOR_REMOTE_PATH }}
+          HOSTGATOR_PROTOCOL: ${{ secrets.HOSTGATOR_PROTOCOL }}
+        run: |
+          : "${HOSTGATOR_PROTOCOL:=ftp}"
+          : "${HOSTGATOR_PORT:=21}"
+          : "${HOSTGATOR_REMOTE_PATH:=public_html}"
+
+          lftp -u "$HOSTGATOR_USERNAME","$HOSTGATOR_PASSWORD" -p "$HOSTGATOR_PORT" "$HOSTGATOR_PROTOCOL://$HOSTGATOR_HOST" <<EOF
+          set ssl:verify-certificate yes
+          set ftp:ssl-allow yes
+          set ftp:ssl-force false
+          set net:max-retries 2
+          set net:timeout 30
+          mkdir -p "$HOSTGATOR_REMOTE_PATH"
+          mirror --reverse --verbose --parallel=4 --exclude-glob wp/ --exclude-glob wp/** --exclude-glob wp-admin/** --exclude-glob wp-content/** --exclude-glob wp-includes/** out/ "$HOSTGATOR_REMOTE_PATH"/
+          bye
+          EOF

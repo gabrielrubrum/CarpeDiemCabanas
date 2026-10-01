@@ -1,0 +1,7 @@
+.next
+deploy-hostgator
+test-deploy
+node_modules
+dist
+build
+out
