@@ -75,6 +75,7 @@ jobs:
 
           lftp -u "$HOSTGATOR_USERNAME","$HOSTGATOR_PASSWORD" -p "$HOSTGATOR_PORT" "$LFTP_URL" <<EOF
           set ssl:verify-certificate yes
+          set ssl:check-hostname no
           set ftp:ssl-allow yes
           set ftp:ssl-force $SSL_FORCE
           set net:max-retries 2
