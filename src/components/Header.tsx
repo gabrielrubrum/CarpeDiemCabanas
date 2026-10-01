@@ -42,7 +42,9 @@ export default function Header({ variant = 'dark' }: HeaderProps) {
                 width={180}
                 height={180}
                 priority
-                className="h-auto object-contain w-[145px] sm:w-[150px] lg:w-[205px] xl:w-[220px]"
+                className={`h-auto object-contain w-[145px] sm:w-[150px] lg:w-[205px] xl:w-[220px] transition-all duration-300 ${
+                  !isLight ? 'brightness-0 opacity-90' : ''
+                }`}
               />
             </Link>
 
